@@ -6,7 +6,7 @@ from PIL import Image
 
 class VGG19:
     def __init__(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
         # fetch only the convolutional blocks - discard the classifier
         self.model = models.vgg19(pretrained=True).features.to(self.device)
 
@@ -126,7 +126,7 @@ class StyleTransfer:
         )
         return total_loss
 
-    def optimize(self, steps=5000, save_every=250):
+    def optimize(self, steps=1000, save_every=250):
         # content image as starting point
         generated = self.content_image.clone().requires_grad_(True)
         optimizer = torch.optim.Adam([generated], lr=0.003)
@@ -152,7 +152,7 @@ class StyleTransfer:
 
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
-        image = tensor.clone().detach()
+        image = tensor.clone().detach().cpu()
         image = image.squeeze(0)
 
         # reverse the normalization
@@ -171,11 +171,11 @@ class StyleTransfer:
 
 if __name__ == "__main__":
     style_transfer = StyleTransfer(
-        content_path="images/content.jpg",
-        style_path="images/style.jpg",
-        image_size=224,
+        content_path="images/content/content1.jpg",
+        style_path="images/style/style1.jpg",
+        image_size=244,
         content_weight=1,
         style_weight=1e6,
     )
 
-    style_transfer.optimize(steps=5000, save_every=250)
+    style_transfer.optimize(steps=2000, save_every=500)
