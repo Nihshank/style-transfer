@@ -92,4 +92,22 @@ class StyleTransfer:
         self.content_weight = content_weight
         self.style_weight = style_weight
 
-        
+        def compute_losses(self, generated_features):
+            # content loss - MSE between generated and content feature maps at block4_conv2
+            content_loss = torch.mean(
+                (generated_features['block4_conv2'] - self.content_features['block4_conv2']) ** 2
+            )
+
+            # style loss - compare gram matrices across all style layers
+            style_loss = 0
+            for layer in self.style_grams:
+                generated_gram = gram_matrix(generated_features[layer])
+                style_gram = self.style_grams[layer]
+                
+                _, channels, height, width = generated_features[layer].shape
+                layer_style_loss = torch.mean((generated_gram - style_gram) ** 2)
+                style_loss += layer_style_loss / (channels * height * width)
+
+            total_loss = (self.content_weight * content_loss) + (self.style_weight * style_loss)
+            return total_loss
+
