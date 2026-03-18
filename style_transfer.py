@@ -66,3 +66,30 @@ def gram_matrix(tensor):
     tensor = tensor.view(channels, height * width)
     gram = torch.mm(tensor, tensor.t())
     return gram
+
+
+class StyleTransfer:
+    def __init__(self, content_path, style_path, image_size=224, content_weight=1, style_weight=1e6):
+        self.vgg = VGG19()
+        self.device = self.vgg.device
+        self.processor = ImageProcessor(self.device, image_size)
+        self.extractor = FeatureExtractor(self.vgg.model)
+        
+        # load images
+        self.content_image = self.processor.load_image(content_path)
+        self.style_image = self.processor.load_image(style_path)
+        
+        # extract and store targets once
+        self.content_features = self.extractor.get_features(self.content_image)
+        self.style_features = self.extractor.get_features(self.style_image)
+        
+        # compute gram matrices for style image once
+        self.style_grams = {
+            layer: gram_matrix(self.style_features[layer])
+            for layer in self.style_features
+        }
+        
+        self.content_weight = content_weight
+        self.style_weight = style_weight
+
+        
