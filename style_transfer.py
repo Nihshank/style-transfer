@@ -54,3 +54,15 @@ class FeatureExtractor:
                 features[self.layers[name]] = x
 
         return features
+
+
+'''
+gram matrix for style image - flatten height and width into 1 dimension
+not concerned with spatial position; only with textures(patterns) appearing 
+together across the image and the strength of such textures
+'''
+def gram_matrix(tensor):
+    _, channels, height, width = tensor.shape
+    tensor = tensor.view(channels, height * width)
+    gram = torch.mm(tensor, tensor.t())
+    return gram
