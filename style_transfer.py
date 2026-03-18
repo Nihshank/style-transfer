@@ -31,3 +31,26 @@ class ImageProcessor:
         image = self.transform(image)
         image = image.unsqueeze(0)
         return image.to(self.device)
+    
+class FeatureExtractor:
+    def __init__(self, model):
+        self.model = model
+        self.layers = {
+            '0':  'block1_conv1',
+            '5':  'block2_conv1',
+            '10': 'block3_conv1',
+            '19': 'block4_conv1',
+            '21': 'block4_conv2', # content feature map (rest for style)
+            '28': 'block5_conv1',
+        }
+
+    def get_features(self, image):
+        features = {}
+        x = image # start with the content image
+
+        for name, layer in self.model._modules.items():
+            x = layer(x) # process image applying each layer 
+            if name in self.layers:
+                features[self.layers[name]] = x
+
+        return features
