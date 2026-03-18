@@ -1,5 +1,5 @@
 import torch
-import torchvision.models as models
+from torchvision.models import vgg19, VGG19_Weights
 import torchvision.transforms as transforms
 from PIL import Image
 
@@ -8,7 +8,7 @@ class VGG19:
     def __init__(self):
         self.device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
         # fetch only the convolutional blocks - discard the classifier
-        self.model = models.vgg19(pretrained=True).features.to(self.device)
+        self.model = vgg19(weights=VGG19_Weights.DEFAULT).features.to(self.device)
 
         for param in self.model.parameters():
             param.requires_grad = False
@@ -127,25 +127,23 @@ class StyleTransfer:
         return total_loss
 
     def optimize(self, steps=1000, save_every=250):
-        # content image as starting point
         generated = self.content_image.clone().requires_grad_(True)
         optimizer = torch.optim.Adam([generated], lr=0.003)
 
         for step in range(steps):
-            # extract features of generated image
             generated_features = self.extractor.get_features(generated)
-
-            # calculate loss
             total_loss = self.compute_losses(generated_features)
 
-            # backpropagation
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()
 
             if step % save_every == 0:
                 print(f"Step {step}, Loss: {total_loss.item():.2f}")
-                self.save_image(generated, f"output/step_{step}.png")
+                self.save_image(generated, f"result/step_{step}.png")
+
+        print(f"Step {steps}, Loss: {total_loss.item():.2f}")
+        self.save_image(generated, f"result/final.png")
 
     def save_image(self, tensor, path):
         import os
@@ -171,11 +169,11 @@ class StyleTransfer:
 
 if __name__ == "__main__":
     style_transfer = StyleTransfer(
-        content_path="images/content/content1.jpg",
+        content_path="images/content/content2.jpg",
         style_path="images/style/style1.jpg",
         image_size=244,
         content_weight=1,
-        style_weight=1e6,
+        style_weight=1e9,
     )
 
-    style_transfer.optimize(steps=2000, save_every=500)
+    style_transfer.optimize(steps=1500, save_every=500)
