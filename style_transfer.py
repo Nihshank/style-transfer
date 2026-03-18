@@ -92,22 +92,44 @@ class StyleTransfer:
         self.content_weight = content_weight
         self.style_weight = style_weight
 
-        def compute_losses(self, generated_features):
-            # content loss - MSE between generated and content feature maps at block4_conv2
-            content_loss = torch.mean(
-                (generated_features['block4_conv2'] - self.content_features['block4_conv2']) ** 2
-            )
+    def compute_losses(self, generated_features):
+        # content loss - MSE between generated and content feature maps at block4_conv2
+        content_loss = torch.mean(
+            (generated_features['block4_conv2'] - self.content_features['block4_conv2']) ** 2
+        )
 
-            # style loss - compare gram matrices across all style layers
-            style_loss = 0
-            for layer in self.style_grams:
-                generated_gram = gram_matrix(generated_features[layer])
-                style_gram = self.style_grams[layer]
-                
-                _, channels, height, width = generated_features[layer].shape
-                layer_style_loss = torch.mean((generated_gram - style_gram) ** 2)
-                style_loss += layer_style_loss / (channels * height * width)
+        # style loss - compare gram matrices across all style layers
+        style_loss = 0
+        for layer in self.style_grams:
+            generated_gram = gram_matrix(generated_features[layer])
+            style_gram = self.style_grams[layer]
+            
+            _, channels, height, width = generated_features[layer].shape
+            layer_style_loss = torch.mean((generated_gram - style_gram) ** 2)
+            style_loss += layer_style_loss / (channels * height * width)
 
-            total_loss = (self.content_weight * content_loss) + (self.style_weight * style_loss)
-            return total_loss
+        total_loss = (self.content_weight * content_loss) + (self.style_weight * style_loss)
+        return total_loss
+    
+    
+    def optimize(self, steps=5000, save_every=250):
+        # content image as starting point
+        generated = self.content_image.clone().requires_grad_(True)
+        optimizer = torch.optim.Adam([generated], lr=0.003)
+        
+        for step in range(steps):
+            # extract features of generated image
+            generated_features = self.extractor.get_features(generated)
+        
+            # calculate loss
+            total_loss = self.compute_losses(generated_features)
+            
+            # backpropagation
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
+            
+            if step % save_every == 0:
+                print(f'Step {step}, Loss: {total_loss.item():.2f}')
+                self.save_image(generated, f'output/step_{step}.png')
 
