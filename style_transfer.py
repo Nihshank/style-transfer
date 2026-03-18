@@ -111,7 +111,7 @@ class StyleTransfer:
         total_loss = (self.content_weight * content_loss) + (self.style_weight * style_loss)
         return total_loss
     
-    
+
     def optimize(self, steps=5000, save_every=250):
         # content image as starting point
         generated = self.content_image.clone().requires_grad_(True)
@@ -133,3 +133,23 @@ class StyleTransfer:
                 print(f'Step {step}, Loss: {total_loss.item():.2f}')
                 self.save_image(generated, f'output/step_{step}.png')
 
+
+    def save_image(self, tensor, path):
+        import os
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        
+        image = tensor.clone().detach()
+        image = image.squeeze(0)
+        
+        # reverse the normalization
+        mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+        image = image * std + mean
+        
+        # clamp pixel values between 0 and 1
+        image = image.clamp(0, 1)
+        
+        # convert to PIL and save
+        image = image.permute(1, 2, 0).numpy()
+        image = (image * 255).astype('uint8')
+        Image.fromarray(image).save(path)
