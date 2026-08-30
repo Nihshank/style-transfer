@@ -1,4 +1,4 @@
-# Neural Style Transfer
+# Neural Renderer
 
 Applies the artistic style of a painting to a content image using a pretrained VGG19 CNN. Built from scratch in Python with PyTorch.
 
